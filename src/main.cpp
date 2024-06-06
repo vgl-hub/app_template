@@ -1,4 +1,18 @@
-#include <main.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string>
+#include <iostream>
+#include <getopt.h>
+
+#include "log.h"
+#include "global.h"
+#include "bed.h"
+#include "struct.h"
+#include "threadpool.h"
+
+#include <runner.hpp>
+#include <main.hpp>
 
 std::string version = "0.0.1";
 
@@ -7,11 +21,13 @@ std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolut
 int verbose_flag;
 int maxThreads = 0;
 int cmd_flag;
-UserInput userInput;
+int tabular_flag;
+ToolUserInput userInput;
 
 std::mutex mtx;
 ThreadPool<std::function<bool()>> threadPool;
 Log lg;
+std::vector<Log> logs;
 
 std::string getArgs(char* optarg, unsigned int argc, char **argv) {
     
@@ -61,80 +77,84 @@ int main(int argc, char **argv) {
         {0, 0, 0, 0}
     };
     
-    const static std::unordered_map<std::string,int> tools{
-        {"something",1},
-        {"somethingelse",2}
+//    const static std::unordered_map<std::string,int> tools{
+//        {"tool1",1},
+//        {"tool2",2}
+//    };
+    
+    const static std::unordered_map<std::string,int> modes{
+        {"mode1",1},
+        {"mode2",2}
     };
     
-    while (arguments) { // loop through argv
-        
-        int option_index = 0;
-        
-        c = getopt_long(argc, argv, "-:vh",
-                        long_options, &option_index);
-        
-        if (c == -1) { // exit the loop if run out of options
-            break;
-            
-        }
-
-        switch (c) {
-            case ':': // handle options without arguments
-                switch (optopt) { // the command line option last matched
-                    case 'b':
-                        break;
-                        
-                    default:
-                        fprintf(stderr, "option -%c is missing a required argument\n", optopt);
-                        return EXIT_FAILURE;
-                }
-                break;
-            default: // handle positional arguments
-                                
-                switch (tools.count(optarg) ? tools.at(optarg) : 0) {
-                    case 1:
-                        cmd = "gfastats/build/bin/mytool" + getArgs(optarg, argc, argv);;
-                        
-                        arguments = false;
-                        
-                        break;
-                    case 2:
-                        cmd = "gfalign/build/bin/mytool2" + getArgs(optarg, argc, argv);;
-                        
-                        arguments = false;
-                        
-                        break;
-                        
-                }
-                
-            case 0: // case for long options without short options
-                
-//                if (strcmp(long_options[option_index].name,"line-length") == 0)
-//                  splitLength = atoi(optarg);
-                
-                break;
-                
-            case 'v': // software version
-                printf("mytool v%s\n", version.c_str());
-                printf("Giulio Formenti giulio.formenti@gmail.com\n");
-                exit(0);
-                
-            case 'h': // help
-                printf("mytool [command]\n");
-                printf("\nOptions:\n");
-                printf("-v --version software version.\n");
-                printf("--cmd print $0 to stdout.\n");
-                exit(0);
-        }
-        
-        if    (argc == 2 || // handle various cases in which the output should include summary stats
-              (argc == 3 && pos_op == 2) ||
-              (argc == 4 && pos_op == 3)) {
-            
-        }
-        
+    userInput.mode = modes.count(argv[1]) ? modes.at(argv[1]) : 0;
+    if (userInput.mode == 0) {
+        fprintf(stderr, "Unrecognized mode (%s).\n", argv[1]);
+        return EXIT_FAILURE;
     }
-    
+        
+    switch (userInput.mode) {
+        default:
+        case 0: { // mode1
+            
+            while (arguments) { // loop through argv
+                
+                int option_index = 0;
+                
+                c = getopt_long(argc, argv, "-:vh",
+                                long_options, &option_index);
+                
+                if (c == -1) { // exit the loop if run out of options
+                    break;
+                }
+                
+                switch (c) {
+                    case ':': // handle options without arguments
+                        switch (optopt) { // the command line option last matched
+                            case 'b':
+                                break;
+                                
+                            default:
+                                fprintf(stderr, "option -%c is missing a required argument.\n", optopt);
+                                return EXIT_FAILURE;
+                        }
+                        break;
+                    default: // handle positional arguments
+                        
+                        //                switch (tools.count(optarg) ? tools.at(optarg) : 0) {
+                        //                    case 1:
+                        //                        cmd = "tool1/build/bin/mytool1" + getArgs(optarg, argc, argv);;
+                        //                        arguments = false;
+                        //                        break;
+                        //                    case 2:
+                        //                        cmd = "tool2/build/bin/tool2" + getArgs(optarg, argc, argv);;
+                        //                        arguments = false;
+                        //                        break;
+                        //                }
+                    case 0: // case for long options without short options
+                        
+                        //                if (strcmp(long_options[option_index].name,"line-length") == 0)
+                        //                  splitLength = atoi(optarg);
+                        break;
+                    case 'v': // software version
+                        printf("mytool v%s\n", version.c_str());
+                        printf("Giulio Formenti giulio.formenti@gmail.com\n");
+                        exit(0);
+                    case 'h': // help
+                        printf("mytool [command]\n");
+                        printf("\nOptions:\n");
+                        printf("-v --version software version.\n");
+                        printf("--cmd print $0 to stdout.\n");
+                        exit(0);
+                }
+                
+                if    (argc == 2 || // handle various cases in which the output should include summary stats
+                       (argc == 3 && pos_op == 2) ||
+                       (argc == 4 && pos_op == 3)) {
+                }
+            }
+        }
+    }
     if (cmd_flag) { // print command line
         for (unsigned short int arg_counter = 0; arg_counter < argc; arg_counter++) {
             printf("%s ", argv[arg_counter]);
@@ -143,8 +163,17 @@ int main(int argc, char **argv) {
         
     }
     
-    std::cout<<"Invoking: "<<cmd<<std::endl;
-    std::system(cmd.c_str());
+//    std::cout<<"Invoking: "<<cmd<<std::endl;
+//    std::system(cmd.c_str());
+    
+    Runner runner;
+    threadPool.init(maxThreads); // initialize threadpool
+    maxMem = (userInput.maxMem == 0 ? get_mem_total(3) * 0.9 : userInput.maxMem); // set memory limit
+    runner.loadInput(userInput); // load user input
+    lg.verbose("User input loaded");
+    runner.run(); // run algorithms
+    threadPool.join(); // join threads
+    exit(EXIT_SUCCESS);
     
     exit(EXIT_SUCCESS);
     

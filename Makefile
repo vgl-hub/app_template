@@ -13,11 +13,11 @@ BINDIR := $(BUILD)/.o
 LIBS = -lz
 LDFLAGS = -pthread
 
-OBJS := main
+OBJS := main runner
 BINS := $(addprefix $(BINDIR)/, $(OBJS))
 
 head: $(BINS) module1 #module2 | $(BUILD)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $(BUILD)/$(TARGET) $(wildcard $(BINDIR)/*) $(LIBS) #$(MODULE1_DIR)/*.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $(BUILD)/$(TARGET) $(wildcard $(BINDIR)/*) $(LIBS) $(MODULE1_DIR)/*.o
 	
 debug: CXXFLAGS += -DDEBUG -O0
 debug: CCFLAGS += -DDEBUG
@@ -27,7 +27,7 @@ all: head
 
 $(OBJS): %: $(BINDIR)/%
 	@
-$(BINDIR)%: $(SOURCE)/%.cpp $(INCLUDE)/%.h | $(BINDIR)
+$(BINDIR)%: $(SOURCE)/%.cpp $(INCLUDE)/%.hpp | $(BINDIR)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -c $(SOURCE)/$(notdir $@).cpp -o $@
 	
 .PHONY: module1
