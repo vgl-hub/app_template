@@ -136,6 +136,13 @@ int main(int argc, char **argv) {
                         //                if (strcmp(long_options[option_index].name,"line-length") == 0)
                         //                  splitLength = atoi(optarg);
                         break;
+                    case '?': // unrecognized option
+                        if (optopt != 0)
+                            fprintf(stderr, "Unrecognized option: %c\n", optopt);
+                        else
+                            fprintf(stderr, "Unrecognized option: %s\n", argv[optind-1]);
+                        printHelp();
+                        break;
                     case 'v': // software version
                         printf("mytool v%s\n", version.c_str());
                         printf("Giulio Formenti giulio.formenti@gmail.com\n");
